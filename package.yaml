@@ -1,0 +1,48 @@
+name:                EventB-ASG
+version:             0.1.0.0
+github:              "forestaa/EventB-ASG"
+license:             BSD3
+author:              "Daichi Morita"
+maintainer:          "t.daichi.3@gmail.com"
+copyright:           "2018 Daichi Morita"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:         Please see the README on Github at <https://github.com/forestaa/EventB-ASG#readme>
+
+dependencies:
+- base >= 4.7 && < 5
+
+library:
+  source-dirs: src
+
+executables:
+  EventB-ASG-exe:
+    main:                Main.hs
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - EventB-ASG
+
+tests:
+  EventB-ASG-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - EventB-ASG
