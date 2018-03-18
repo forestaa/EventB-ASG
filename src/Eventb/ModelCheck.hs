@@ -13,6 +13,7 @@ import           Data.Maybe
 import           Debug.Trace
 import           Eventb
 import qualified Eventb.Graph                    as G
+import qualified Eventb.Predicate                as P
 import           Eventb.LTL.Buchi                hiding (isempty)
 import           Eventb.LTL.LTL
 import           Eventb.LTL.Type
@@ -70,9 +71,9 @@ instance Show LTLState where
 makeLTLGraph :: EventbMac -> LTL AP -> IO (G.Graph,G.Vertex)
 makeLTLGraph mac ltl = do
   putStrLn "make graph for LTL..."
-  v <- runReaderT (makeVerticesForLTL (vars mac) ltl (G.collectInv mac) (mconcat . grd <$> events mac)) (events mac)
+  v <- runReaderT (makeVerticesForLTL (vars mac) ltl (invAll mac) (grd <$> events mac)) (events mac)
   putStrLn $ "the number of vetices is " `mappend` show (length v)
-  e <- fmap concat . mapConcurrently (uncurry G.makeEdges) $ (,) <$> v <*> v
+  e <- flip runReaderT (events mac) $ G.makeEdges v v
   let g = G.Graph v e
   initv <- G.initVertex (initenv mac) (G.vertices g)
   return (g,initv)
@@ -107,16 +108,16 @@ extendAExpProp p = S.singleton p
 addAPCond :: G.Vertex -> (Pred,S.Set Pred) -> IO G.Vertex
 addAPCond v (p,ps) = do
   let newcond = G.cond v `And` p
-  res <- G.minimizePred newcond
-  return v{G.cond = res, G.props = G.props v `S.union` ps}
+  res <- P.minimizePred newcond
+  return v{G.cond = res}
 
 addAPCond' :: G.Vertex -> (Pred,S.Set Pred) -> IO (Maybe G.Vertex)
 addAPCond' v (p,ps) = do
   let newcond = G.cond v `And` p
-  b <- G.isUnsatisfiable newcond
+  b <- P.isUnsatisfiable newcond
   if b
     then return Nothing
-    else return $ Just v{G.cond = newcond, G.props = G.props v `S.union` ps}
+    else return $ Just v{G.cond = newcond}
 
 
 intersectionBetweenGraphAndLTL :: [Event] -> G.Graph -> G.Vertex -> LTL AP -> Buchi Event LTLState
@@ -127,15 +128,14 @@ intersectionBetweenGraphAndLTL evts g initv ltl = Buchi (S.fromList evts) s s0 e
     b = ltlToBuchi ltl
     s = fmap LTLState ((,) <$> v <*> states b)
     s0 = fmap LTLState ((,) <$> S.singleton initv <*> initial b)
-    edge = s >>= computeTransition (S.concat $ alpha b) (transition b) e
+    edge = s >>= computeTransition (M.fromList $ fmap (name &&& id) evts) (S.concat $ alpha b) (transition b) e
     f = fmap LTLState ((,) <$> v <*> final b)
 
-computeTransition :: S.Set AP -> Edges (S.Set AP) (States (LTL AP), States (LTL AP)) -> S.Set G.Edge ->  LTLState -> Edges Event LTLState
-computeTransition a ltledges graphedges (LTLState (s,ls)) =
-  [ Edge (LTLState (s,ls)) (LTLState (s',ls')) evt | (ls',ps) <- possibleLTLTargets, (s',evt) <- possibleGraphTargets, (AP <$> ps) == S.intersection (AP <$> a) (G.props s') ]
+computeTransition :: M.Map EventName Event -> S.Set AP -> Edges (S.Set AP) (States (LTL AP), States (LTL AP)) -> S.Set G.Edge ->  LTLState -> Edges Event LTLState
+computeTransition m a ltledges graphedges (LTLState (s,ls)) = [ Edge (LTLState (s,ls)) (LTLState (s',ls')) evt | (ls',ps) <- possibleLTLTargets, (s',evt) <- possibleGraphTargets, (AP <$> ps) == (AP <$> a) ] -- (Ap <$> ps == AP <$> a) is wrong
   where
     possibleLTLTargets = (target &&& label) <$> S.filter ((==) ls . source) ltledges
-    possibleGraphTargets = (G.target &&& G.label) <$> S.filter ((==) s . G.source) graphedges
+    possibleGraphTargets = (G.target &&& ((m M.!) . G.label)) <$> S.filter ((==) s . G.source) graphedges
 
 buchiToGraph :: (Ord a, Ord s) => Buchi a s -> [(s, s, [s])]
 buchiToGraph b = (\s -> (s,s, S.toList . S.map target $ S.filter ((==) s . source) (transition b))) <$> S.toList (states b)

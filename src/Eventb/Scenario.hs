@@ -12,7 +12,9 @@ import           Data.SBV             hiding (isSatisfiable, label, name)
 import qualified MySet                as S
 --import           Debug.Trace
 import           Eventb
+import           Eventb.Dot
 import           Eventb.Graph
+import           Eventb.Predicate
 import           System.IO
 import           System.Process
 
@@ -22,7 +24,7 @@ data Info = Info {edges :: Edges, initcond :: Pred, initvertex :: Vertex}
 newtype Scenario = Scenario {scenario :: (Path, [(String,Value)])}
 newtype Scenarios = Scenarios {scenarios :: [Scenario]}
 instance Show Path where
-  show = intercalate " -> " . fmap (name . label) . path
+  show = intercalate " -> " . fmap label . path
 instance Show Scenario where
   show s = concat [ "initial environment:\n"
                   , showEnv env
@@ -152,7 +154,7 @@ isSatisfiable b = do
   res <- sat $ do
     smap <- varsToSMap vars
     runReaderT (predToPredicate b) smap
-  case extractModel res :: Maybe ([Integer], [Bool], [Eventb.Graph.Color]) of
+  case extractModel res :: Maybe ([Integer], [Bool], [Eventb.Predicate.Color]) of
     Just (aExps, bExps, colors) -> return . Just $
                 zip aExpVars (fmap (AExp . AInt) aExps) `mappend`
                 zip bExpVars (fmap (BExp . boolToBExp) bExps) `mappend`
@@ -212,7 +214,7 @@ searchScenarios (e:es) = do
 makeScenario :: EventbMac -> IO Scenarios
 makeScenario mac = do
   putStrLn "making Graph..."
-  g <- makeGraph mac (mconcat . grd <$> events mac)
+  g <- makeEventGraph mac
   initv <- initVertex (initenv mac) $ vertices g
   putStrLn "Done"
   putStrLn "delete unreachable states..."

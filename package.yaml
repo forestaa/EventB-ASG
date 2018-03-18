@@ -24,6 +24,21 @@ dependencies:
 
 library:
   source-dirs: src
+  exposed-modules:
+  - Eventb
+  - Eventb.Graph
+  - Eventb.ModelCheck
+  - Eventb.Dot
+  dependencies:
+  - set-monad
+  - mtl
+  - deepseq
+  - containers
+  - sbv
+  - syb
+  - lifted-async
+  - process
+  - random
 
 executables:
   EventB-ASG-exe:
@@ -35,6 +50,7 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - EventB-ASG
+    - criterion
 
 tests:
   EventB-ASG-test:

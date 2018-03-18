@@ -3,6 +3,7 @@ module Main where
 import           Eventb
 import qualified Eventb.Graph      as G
 import qualified Eventb.ModelCheck as M
+import qualified Eventb.Dot        as D
 
 main :: IO ()
 main = loop [test1,test2,test3,test4,test5,test6,test7,test8,test9,test10]
@@ -40,6 +41,6 @@ test10 = M.afterPrecedence (var "c" `Gt` AInt 0) (Color (var "ml_tl") `Eq` Color
 
 testMakeGraph :: EventbMac -> IO ()
 testMakeGraph mac = do
-  g <- makeEventGraph mac
-  initv <- initVertex (initenv mac) (vertices g)
-  writeGraph (macname mac) g initv
+  g <- G.makeEventGraph mac
+  initv <- G.initVertex (initenv mac) (G.vertices g)
+  D.writeGraph (macname mac) g initv

@@ -232,7 +232,8 @@ minimizePred' (Imply b1 b2) = do
       b1' <- put (f . (`Imply` b2)) >> minimizePred' b1
       b2' <- put (f . Imply b1') >> minimizePred' b2
       return $ Imply b1' b2'
-minimizePred' b = traceShow (b) (return ()) >> return b
+minimizePred' b = return b
+-- minimizePred' b = traceShow (b) (return ()) >> return b
 
 choice :: [(Pred, StateT (Pred -> Pred) (ReaderT Pred IO) Pred)] -> StateT (Pred -> Pred) (ReaderT Pred IO) (Maybe Pred)
 choice = foldl' (\x y -> mplus <$> x <*> p y) (return Nothing)
